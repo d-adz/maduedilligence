@@ -1,0 +1,44 @@
+SHARE PURCHASE AGREEMENT
+
+This Share Purchase Agreement is entered into on 15 March 2026 between
+Alpine Components GmbH ("Seller") and Nordwest Holding AG ("Buyer")
+concerning the acquisition of 100% of the shares in Zielgesellschaft
+Technik GmbH (the "Target Company").
+
+1. Purchase Price
+The total purchase price for the shares shall be EUR 4,200,000, payable
+in full within 30 days of signing.
+
+2. Representations of the Seller
+The Seller represents and warrants that the Target Company is not
+insolvent, is not subject to any bankruptcy or liquidation proceedings,
+and has not filed for reorganisation under Austrian insolvency law.
+
+3. Legal Proceedings
+The Seller represents that there are no pending or threatened lawsuits,
+claims, or arbitration proceedings against the Target Company as of the
+date of this Agreement.
+
+4. Intellectual Property
+The Seller warrants that the Target Company owns all patents, trademarks,
+and know-how used in its business, free and clear of any third-party
+claims, and that no such intellectual property is held under licence
+from any other party.
+
+5. Confidentiality
+Each party shall keep confidential all non-public business, technical,
+and pricing information disclosed by the other party and shall not
+disclose such information to any third party without the prior written
+consent of the disclosing party.
+
+6. Liability
+The Seller's total liability under this Agreement shall be limited to
+EUR 1,000,000, excluding indirect or consequential damages.
+
+7. Term and Termination
+This Agreement shall take effect upon signing and may be terminated by
+either party upon sixty days' written notice, unless otherwise agreed.
+
+8. Governing Law
+This Agreement shall be governed by the laws of Austria, including
+§ 38 UGB and the relevant provisions of the ABGB.
