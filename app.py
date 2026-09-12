@@ -649,7 +649,7 @@ elif page == "Library":
         header_row[2].markdown(t("col_type"))
         for i, f in enumerate(st.session_state.library_files):
             row = st.columns([0.4, 5, 2])
-            row[0].checkbox("", key=f"lib_check_{i}", label_visibility="collapsed")
+            row[0].checkbox("Select", key=f"lib_check_{i}", label_visibility="collapsed")
             row[1].markdown(f"📄 {f['name']}")
             row[2].markdown(f"`{f['type']}`")
 
