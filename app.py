@@ -32,6 +32,20 @@ import streamlit as st
 from docx import Document
 from pypdf import PdfReader
 
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None
+    types = None
+
+# Free-tier Gemini Flash model. Google has renamed/deprecated Flash models
+# several times through 2026 (2.0 -> 2.5 -> 3 -> 3.5...), so if this stops
+# working with a "model not found" error, check the current free-tier
+# model name at https://ai.google.dev/gemini-api/docs/models and update
+# this one constant — nothing else in the app needs to change.
+GEMINI_MODEL = "gemini-2.5-flash"
+
 st.set_page_config(page_title="Raiffeisen-Landesbank Steiermark — M&A Due Diligence", layout="wide")
 
 BRAND_YELLOW = "#FFCC00"
@@ -59,6 +73,44 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "ui_lang" not in st.session_state:
     st.session_state.ui_lang = "English"
+if "gemini_api_key" not in st.session_state:
+    st.session_state.gemini_api_key = ""
+
+
+# ---------------------------------------------------------------------------
+# GEMINI CLIENT (used by the Chat and Image Q&A pages)
+#
+# Uses Google's Gemini API free tier — no cost, no credit card required to
+# start (get a key at https://aistudio.google.com). One SDK handles both
+# text chat and image Q&A (Gemini accepts raw image bytes directly, no
+# manual base64 encoding needed), so there's only one integration to
+# maintain rather than two separate models.
+#
+# API key resolution order: Streamlit secrets (for a real deployment) ->
+# a session-only sidebar input (for quick local testing without touching
+# any config files). The key is never written to disk by this app.
+# ---------------------------------------------------------------------------
+
+def get_gemini_api_key() -> str | None:
+    api_key = None
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY")
+    except Exception:
+        api_key = None
+    if not api_key:
+        api_key = st.session_state.get("gemini_api_key", "")
+    return api_key or None
+
+
+def get_gemini_client():
+    """Returns a configured google-genai Client, or None only if no key/SDK
+    is available at all. Any real configuration error (bad key, etc.) is
+    allowed to raise so the calling page can show the actual error instead
+    of silently falling back to the mock reply."""
+    api_key = get_gemini_api_key()
+    if not api_key or genai is None:
+        return None
+    return genai.Client(api_key=api_key)
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +216,12 @@ UI_STRINGS = {
                        "German": "Bitte zuerst ein Bild auswählen und dann fragen."},
     "image_qa_question_label": {"English": "Ask about this image", "German": "Frage zu diesem Bild"},
     "image_qa_ask_button": {"English": "Ask", "German": "Fragen"},
+    "api_key_label": {"English": "🔑 Gemini API key (session only — free at aistudio.google.com)", "German": "🔑 Gemini-API-Schlüssel (nur diese Sitzung — kostenlos auf aistudio.google.com)"},
+    "chat_no_api_key": {
+        "English": "No Gemini API key set — enter one in the sidebar for real answers, or continue with placeholder replies.",
+        "German": "Kein Gemini-API-Schlüssel hinterlegt — in der Seitenleiste eintragen für echte Antworten, sonst nur Platzhalterantworten.",
+    },
+    "ai_error": {"English": "(error calling Gemini: {err})", "German": "(Fehler beim Aufruf von Gemini: {err})"},
     "image_qa_mock_answer": {
         "English": "**(demo) Answer:** This is a placeholder response to \"{q}\" — wire up a real vision model to replace this.",
         "German": "**(Demo) Antwort:** Dies ist eine Platzhalterantwort auf „{q}“ — hier ein echtes Bildmodell einbinden.",
@@ -508,6 +566,19 @@ with st.sidebar:
         f"<h2 style='color:{BRAND_DARK};margin:0;font-size:1.15em;'>{t('sidebar_title')}</h2></div>",
         unsafe_allow_html=True,
     )
+
+    _has_secret_key = False
+    try:
+        _has_secret_key = bool(st.secrets.get("GEMINI_API_KEY"))
+    except Exception:
+        _has_secret_key = False
+    if not _has_secret_key:
+        st.session_state.gemini_api_key = st.text_input(
+            t("api_key_label"),
+            type="password",
+            value=st.session_state.gemini_api_key,
+        )
+
     st.caption(t("nav_caption"))
     page = st.radio(
         "Navigation",
@@ -662,8 +733,9 @@ elif page == "Library":
             t("ingest_upload_label"), type=["txt", "docx", "pdf"], key="library_upload"
         )
         if uploaded is not None and uploaded.name not in [f["name"] for f in st.session_state.library_files]:
+            extracted_text = extract_text(uploaded)
             st.session_state.library_files.append(
-                {"name": uploaded.name, "type": uploaded.type or "application/octet-stream"}
+                {"name": uploaded.name, "type": uploaded.type or "application/octet-stream", "text": extracted_text}
             )
             st.session_state.show_uploader = False
             st.rerun()
@@ -684,6 +756,9 @@ elif page == "Chat":
     st.subheader(t("chat_header"))
     st.caption(t("chat_caption"))
 
+    if get_gemini_api_key() is None:
+        st.info(t("chat_no_api_key"))
+
     if not st.session_state.chat_history:
         st.markdown(
             "<div style='text-align:center; padding:60px 0;'>"
@@ -700,8 +775,33 @@ elif page == "Chat":
     prompt = st.chat_input(t("chat_input_placeholder"))
     if prompt:
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-        mock_reply = t("chat_mock_reply", prompt=prompt)
-        st.session_state.chat_history.append({"role": "assistant", "content": mock_reply})
+
+        context = "\n\n---\n\n".join(
+            f"Document: {f['name']}\n{f.get('text', '')[:6000]}"
+            for f in st.session_state.library_files
+        ) or "(no documents in the library yet)"
+        system_prompt = (
+            "You are a due-diligence assistant supporting Raiffeisen-Landesbank "
+            "Steiermark's review of an acquisition. Answer using the library "
+            "documents below where relevant, and say clearly when something "
+            "isn't covered by them rather than guessing.\n\n"
+            f"LIBRARY DOCUMENTS:\n{context}"
+        )
+        try:
+            client = get_gemini_client()
+            if client is not None:
+                response = client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(system_instruction=system_prompt),
+                )
+                reply = response.text
+            else:
+                reply = t("chat_mock_reply", prompt=prompt)
+        except Exception as e:
+            reply = t("ai_error", err=str(e))
+
+        st.session_state.chat_history.append({"role": "assistant", "content": reply})
         st.rerun()
 
 elif page == "Image Q&A":
@@ -724,4 +824,19 @@ elif page == "Image Q&A":
         else:
             img_question = st.text_input(t("image_qa_question_label"), key="image_qa_question")
             if st.button(t("image_qa_ask_button"), key="image_qa_ask") and img_question:
-                st.markdown(t("image_qa_mock_answer", q=img_question))
+                try:
+                    client = get_gemini_client()
+                    if client is not None:
+                        image_bytes = image_file.getvalue()
+                        media_type = image_file.type or "image/png"
+                        image_part = types.Part.from_bytes(data=image_bytes, mime_type=media_type)
+                        response = client.models.generate_content(
+                            model=GEMINI_MODEL,
+                            contents=[image_part, img_question],
+                        )
+                        answer = response.text
+                    else:
+                        answer = t("image_qa_mock_answer", q=img_question)
+                except Exception as e:
+                    answer = t("ai_error", err=str(e))
+                st.markdown(answer)

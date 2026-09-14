@@ -16,12 +16,50 @@ Adapted from the [Incom Leone contract-comparison demo](https://github.com/d-adz
 — same core engine (parsing, clause splitting, comparison), retargeted
 from English/Slovenian to **English/German** for Austrian acquisitions.
 
-The whole page UI (not just the contract text) can be switched between
-English and Austrian German via the language selector at the top of the
-sidebar — this is an instant client-side toggle over a fixed set of UI
-strings, not a live translation call, so there's no lag and no external
-API dependency. Austrian German conventions are used where they differ
-from standard German phrasing.
+## What's in this build
+
+**Branding** — themed in Raiffeisen's yellow-and-black identity rather than
+a generic colour scheme: an inline SVG rendering of the gable-cross
+(Giebelkreuz) emblem appears in the sidebar and main header, and
+`.streamlit/config.toml` sets yellow as the app-wide Streamlit theme
+colour (buttons, radios, checkboxes, sliders). The gable-cross is a
+simplified geometric rendition built from scratch, not a traced copy of
+RLB Steiermark's actual registered logo file — swap in their real logo
+asset if pixel-accuracy matters.
+
+**Full bilingual UI toggle** — a `🌐 Language / Sprache` selector in the
+sidebar switches every label, button, and message across all four pages
+between English and Austrian German instantly (client-side string swap,
+not a live translation call — no lag, no API dependency). This is
+separate from the contract-language detection below, which works on the
+uploaded documents themselves regardless of which UI language is active.
+
+**AI-powered Chat and Image Q&A** — both pages call the **Gemini API**
+(`gemini-2.5-flash`, via the `google-genai` SDK) rather than showing
+placeholder text:
+- **Chat** is grounded in whatever's been uploaded to the **Library**
+  page — uploaded documents' extracted text is fed into Gemini as system
+  context, so questions get answered against the actual due-diligence
+  corpus rather than generically.
+- **Image Q&A** sends the uploaded image directly to Gemini for a real
+  visual answer.
+- If no API key is configured, both pages **fall back cleanly to mock
+  placeholder replies** rather than erroring out — the app never crashes
+  from a missing key.
+
+**API key setup** — checked in this order:
+1. `st.secrets["GEMINI_API_KEY"]` — for a real deployment, set this in
+   `.streamlit/secrets.toml` locally (must be excluded via `.gitignore` —
+   **never commit this file**, since it holds a real credential) or in
+   Streamlit Community Cloud's Secrets panel if deployed there.
+2. A session-only password field in the sidebar, shown only when no
+   secret is found — convenient for quick local testing without touching
+   config files. Never written to disk.
+
+Get a free key with no credit card at **aistudio.google.com**. If
+Legal-Pythia already has a shared Google AI Studio project with a paid
+tier (worth checking with jbormann2/Otmane before using your own), that
+would give higher rate limits than a personal free-tier key.
 
 ## Run it
 
@@ -29,6 +67,12 @@ from standard German phrasing.
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+**Python version:** requires a currently-supported Python (3.10+
+recommended, 3.12/3.13 confirmed working). Python 3.8 is end-of-life and
+Google's SDKs have been dropping support for it — if you hit strange
+`pip install` results (very old/unexpected package versions installing),
+check `python --version` first.
 
 Then upload or paste the two sample contracts
 (`sample_contract_english.txt`, `sample_contract_german.txt`) — they're
@@ -77,14 +121,18 @@ generic placeholder deal.
   phrases are excluded by construction rather than filtered after the
   fact — matching the "default M&A-relevant view + toggle to show
   everything" approach discussed with jbormann2.
+- **Chat and Image Q&A are genuinely AI-powered** (Gemini), not mocked —
+  but only when an API key is configured; otherwise both fall back to
+  placeholder text automatically.
 
 ## Layout
 
 Same as the Leone demo's brief: Contract A (left) | Contract B (middle) |
 Differences & risk panel (right), with labels "Clause changed", "Clause
 missing", "Risk increased", "Why this matters", "Business impact" — plus
-a new due-diligence category callout and an extracted-entities list per
-flagged clause.
+a due-diligence category callout and an extracted-entities list per
+flagged clause (with a toggle to show all extracted entities vs. the
+M&A-relevant default view).
 
 ## Next steps
 
@@ -94,5 +142,9 @@ flagged clause.
   move beyond demo stage
 - Swap the language detector and entity extractor for proper libraries
   (`langdetect`/`fasttext`, spaCy German NER) if time allows
+- Confirm with jbormann2/Otmane whether to use Legal-Pythia's existing
+  Google AI Studio project (paid tier, higher limits) instead of a
+  personal free-tier Gemini key, if this gets shared beyond individual
+  testing
 - Consider adding RLB Steiermark's actual logo/brand assets if this needs
-  to go beyond a placeholder yellow/black colour scheme
+  to go beyond the simplified inline SVG gable-cross rendition
