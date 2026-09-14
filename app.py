@@ -1,7 +1,8 @@
 """
 Legal-Pythia — M&A Due Diligence Contract Comparison Demo
-One-page bilingual (English/German) contract comparison demo for
-Austrian M&A due diligence.
+Built for Raiffeisen-Landesbank Steiermark (RLB Steiermark, Graz/Raaba,
+Austria) — one-page bilingual (English/German) contract comparison demo
+for Austrian M&A due diligence.
 
 Per brief (02 Aug 2026, jbormann2):
 - Build a demo that compares two versions of an acquisition contract,
@@ -31,10 +32,26 @@ import streamlit as st
 from docx import Document
 from pypdf import PdfReader
 
-st.set_page_config(page_title="M&A Due Diligence — Contract Comparison", layout="wide")
+st.set_page_config(page_title="Raiffeisen-Landesbank Steiermark — M&A Due Diligence", layout="wide")
 
-BRAND_BLUE = "#1F3A5F"
-BRAND_DARK = "#1A1A1A"
+BRAND_YELLOW = "#FFCC00"
+BRAND_DARK = "#000000"
+
+# Simplified inline SVG rendering of the Raiffeisen gable-cross (Giebelkreuz)
+# emblem — the traditional crossed gable-end finials mark used across the
+# Austrian Raiffeisen banking group. Rendered as inline SVG (not a hotlinked
+# image) so it always displays with no external dependency or broken-link
+# risk. This is a simplified geometric rendition, not a pixel copy of any
+# specific registered logo file.
+GIEBELKREUZ_SVG = """
+<svg width="42" height="42" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="{yellow}" stroke="{dark}" stroke-width="2"/>
+  <g fill="{dark}">
+    <path d="M50 18 L74 40 L66 40 L66 30 L58 30 L58 40 L50 34 L42 40 L34 40 L34 30 L26 30 L26 40 L18 40 Z"/>
+    <path d="M50 82 L74 60 L66 60 L66 70 L58 70 L58 60 L50 66 L42 60 L34 60 L34 70 L26 70 L26 60 L18 60 Z"/>
+  </g>
+</svg>
+""".format(yellow=BRAND_YELLOW, dark=BRAND_DARK)
 
 if "library_files" not in st.session_state:
     st.session_state.library_files = []
@@ -56,8 +73,8 @@ if "ui_lang" not in st.session_state:
 
 UI_STRINGS = {
     "nav_caption": {"English": "Navigation", "German": "Navigation"},
-    "sidebar_title": {"English": "⚖ M&A Due Diligence", "German": "⚖ M&A Due-Diligence-Prüfung"},
-    "page_title": {"English": "M&A Due Diligence", "German": "M&A Due-Diligence-Prüfung"},
+    "sidebar_title": {"English": "RLB Steiermark — M&A Due Diligence", "German": "RLB Steiermark — M&A Due-Diligence-Prüfung"},
+    "page_title": {"English": "Raiffeisen-Landesbank Steiermark — M&A Due Diligence", "German": "Raiffeisen-Landesbank Steiermark — M&A Due-Diligence-Prüfung"},
     "page_subtitle": {
         "English": "Acquisition Contract Comparison — English & German (Austria)",
         "German": "Vergleich von Unternehmenskaufverträgen — Englisch & Deutsch (Österreich)",
@@ -484,7 +501,13 @@ with st.sidebar:
     )
     st.session_state.ui_lang = lang_choice
 
-    st.markdown(f"<h2 style='color:{BRAND_BLUE};margin-bottom:0;'>{t('sidebar_title')}</h2>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='background:{BRAND_YELLOW};padding:8px 12px;border-radius:6px;"
+        f"margin-bottom:8px;display:flex;align-items:center;gap:10px;'>"
+        f"{GIEBELKREUZ_SVG}"
+        f"<h2 style='color:{BRAND_DARK};margin:0;font-size:1.15em;'>{t('sidebar_title')}</h2></div>",
+        unsafe_allow_html=True,
+    )
     st.caption(t("nav_caption"))
     page = st.radio(
         "Navigation",
@@ -495,8 +518,12 @@ with st.sidebar:
 
 if page == "Compare":
     st.markdown(
-        f"<h1 style='color:{BRAND_BLUE}; margin-bottom:0;'>{t('page_title')}</h1>"
-        f"<p style='color:#666666; font-size:1.1em; margin-top:0;'>{t('page_subtitle')}</p>",
+        f"<div style='display:flex;align-items:center;gap:14px;border-left:6px solid {BRAND_YELLOW};padding-left:14px;'>"
+        f"{GIEBELKREUZ_SVG}"
+        f"<div>"
+        f"<h1 style='color:{BRAND_DARK}; margin-bottom:0;'>{t('page_title')}</h1>"
+        f"<p style='color:#666666; font-size:1.1em; margin-top:0;'>{t('page_subtitle')}</p>"
+        f"</div></div>",
         unsafe_allow_html=True,
     )
     st.caption(t("page_caption"))

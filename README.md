@@ -1,6 +1,7 @@
-# M&A Due Diligence — Contract Comparison Demo
+# M&A Due Diligence — Contract Comparison Demo (RLB Steiermark)
 
-Built to the 02 Aug 2026 brief from jbormann2: compare two versions of an
+Built for **Raiffeisen-Landesbank Steiermark** (Graz/Raaba, Austria) to
+the 02 Aug 2026 brief from jbormann2: compare two versions of an
 acquisition contract, detect clause-level changes, and flag material or
 risky edits for legal review — with a before/after comparison, a short
 explanation of what changed, and a confidence score.
@@ -48,6 +49,11 @@ flag:
   unlimited in the revised version (Risk increased)
 - **Notice period shortened** from sixty to thirty days (Clause changed)
 
+Sample contracts feature a fictional acquisition of a Graz-based target
+(Grazer Antriebstechnik GmbH) by a fictional Styrian holding company, to
+keep the demo grounded in RLB Steiermark's own region rather than a
+generic placeholder deal.
+
 ## What's real vs mocked
 
 - File parsing (TXT/DOCX/PDF), language detection, clause splitting, and
@@ -88,5 +94,5 @@ flagged clause.
   move beyond demo stage
 - Swap the language detector and entity extractor for proper libraries
   (`langdetect`/`fasttext`, spaCy German NER) if time allows
-- Consider adding a firm logo/colour accent if there's a specific client
-  or internal brand to match
+- Consider adding RLB Steiermark's actual logo/brand assets if this needs
+  to go beyond a placeholder yellow/black colour scheme
